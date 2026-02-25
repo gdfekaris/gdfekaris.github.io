@@ -935,22 +935,18 @@ export default function RetroDesktop() {
     }}>
       <ScanlineOverlay />
 
-      {/* Desktop Icons — hidden on mobile */}
-      {!isMobile && (
-        <>
-          <DesktopIcon label="My Computer" icon="🖥" x={16} y={12} />
-          <DesktopIcon label="Network" icon="🌐" x={16} y={90} />
-          <DesktopIcon label="Recycle Bin" icon="🗑" x={16} y={168} />
-          <DesktopIcon label="Galaxy DB" icon="🌌" x={16} y={246} />
-          <DesktopIcon label="Comm Link" icon="📡" x={16} y={324} />
-        </>
-      )}
+      {/* Desktop Icons */}
+      <DesktopIcon label="My Computer" icon="🖥" x={16} y={12} />
+      <DesktopIcon label="Network" icon="🌐" x={16} y={90} />
+      <DesktopIcon label="Recycle Bin" icon="🗑" x={16} y={168} />
+      <DesktopIcon label="Galaxy DB" icon="🌌" x={16} y={246} />
+      <DesktopIcon label="Comm Link" icon="📡" x={16} y={324} />
 
       {/* Background space window - largest */}
       <Win31Window
         title={windowTitles[0]}
         x={isMobile ? 8 : 60} y={isMobile ? 8 : 10}
-        width={isMobile ? vw - 16 : 680} height={isMobile ? 220 : 420}
+        width={isMobile ? vw - 16 : 680} height={isMobile ? 260 : 420}
         zIndex={1}
         href={windowLinks[0]}
         {...(isMobile ? mobileTitle : {})}
@@ -961,8 +957,8 @@ export default function RetroDesktop() {
       {/* Center landscape */}
       <Win31Window
         title={windowTitles[1]}
-        x={isMobile ? 16 : 200} y={isMobile ? 185 : 100}
-        width={isMobile ? vw - 32 : 420} height={isMobile ? 190 : 320}
+        x={isMobile ? vw - 180 : 200} y={isMobile ? 220 : 100}
+        width={isMobile ? 170 : 420} height={isMobile ? 170 : 320}
         zIndex={2}
         href={windowLinks[1]}
         {...(isMobile ? mobileTitle : {})}
@@ -973,8 +969,8 @@ export default function RetroDesktop() {
       {/* Bio-dome left */}
       <Win31Window
         title={windowTitles[2]}
-        x={isMobile ? 24 : 20} y={isMobile ? 335 : 220}
-        width={isMobile ? vw - 48 : 220} height={isMobile ? 170 : 200}
+        x={isMobile ? 10 : 20} y={isMobile ? 350 : 220}
+        width={isMobile ? 170 : 220} height={isMobile ? 170 : 200}
         zIndex={3}
         href={windowLinks[2]}
         {...(isMobile ? mobileTitle : {})}
