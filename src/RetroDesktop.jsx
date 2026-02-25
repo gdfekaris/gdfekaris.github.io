@@ -746,14 +746,14 @@ function Win31Window({
             {/* persistent tap hint for linked windows (mobile only) */}
             {href && isMobile && (
               <div style={{
-                position: "absolute", bottom: 4, left: 4, zIndex: 2,
+                position: "absolute", bottom: 4, right: 4, zIndex: 2,
                 background: "rgba(0,0,0,0.55)", color: "#fff",
                 padding: "2px 6px", fontSize: 9, fontWeight: "bold",
                 border: "1px solid rgba(255,255,255,0.5)",
                 letterSpacing: 0.5, pointerEvents: "none",
                 fontFamily: '"MS Sans Serif", Arial, sans-serif',
               }}>
-                TAP ↗
+                ↖ TAP
               </div>
             )}
           </div>
