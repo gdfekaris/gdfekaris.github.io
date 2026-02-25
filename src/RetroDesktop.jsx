@@ -591,6 +591,8 @@ function Win31Window({
   zIndex = 1,
   minimized = false,
   href = null,
+  titleFontSize = 11,
+  titlePadding = "2px 4px",
 }) {
   const [hovered, setHovered] = useState(false);
   const [pos, setPos] = useState({ x: initialX, y: initialY });
@@ -671,9 +673,9 @@ function Win31Window({
             style={{
               background: `linear-gradient(90deg, ${WIN_COLORS.titleBar}, #1084d0)`,
               color: WIN_COLORS.titleText,
-              padding: "2px 4px",
+              padding: titlePadding,
               fontWeight: "bold",
-              fontSize: 11,
+              fontSize: titleFontSize,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -748,7 +750,7 @@ function Win31Window({
 }
 
 /* ── Taskbar ── */
-function TaskbarButton({ label, href }) {
+function TaskbarButton({ label, href, isMobile }) {
   const [hovered, setHovered] = useState(false);
   const hasLink = !!href;
   return (
@@ -764,7 +766,7 @@ function TaskbarButton({ label, href }) {
       onMouseEnter={hasLink ? () => setHovered(true) : undefined}
       onMouseLeave={hasLink ? () => setHovered(false) : undefined}
       style={{
-        height: 22, padding: "0 8px", fontSize: 10,
+        height: isMobile ? 28 : 22, padding: isMobile ? "0 10px" : "0 8px", fontSize: isMobile ? 13 : 10,
         border: "1px inset #888",
         background: hovered ? "#c8c8c8" : "#b8b8b8",
         cursor: hasLink ? "pointer" : "default",
@@ -781,18 +783,18 @@ function Taskbar({ windows, isMobile }) {
   const items = isMobile ? windows.filter(w => w.href) : windows;
   return (
     <div style={{
-      position: "fixed", bottom: 0, left: 0, right: 0, height: 32, zIndex: 9999,
+      position: "fixed", bottom: 0, left: 0, right: 0, height: isMobile ? 44 : 32, zIndex: 9999,
       background: WIN_COLORS.bg,
       borderTop: `2px solid ${WIN_COLORS.borderLight}`,
       display: "flex", alignItems: "center", padding: "0 4px", gap: 2,
-      fontFamily: '"MS Sans Serif", Arial, sans-serif', fontSize: 11,
+      fontFamily: '"MS Sans Serif", Arial, sans-serif', fontSize: isMobile ? 13 : 11,
       boxShadow: "0 -1px 0 #808080",
     }}>
       {/* Start button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         style={{
-        height: 24, padding: "0 8px", fontWeight: "bold", fontSize: 11,
+        height: isMobile ? 30 : 24, padding: "0 8px", fontWeight: "bold", fontSize: isMobile ? 13 : 11,
         border: "2px outset #ddd", background: "#c0c0c0", cursor: "pointer",
         display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit",
       }}>
@@ -804,19 +806,19 @@ function Taskbar({ windows, isMobile }) {
         </svg>
         Home
       </button>
-      <div style={{ width: 1, height: 20, borderLeft: "1px solid #808080", borderRight: "1px solid #fff", margin: "0 2px" }} />
+      <div style={{ width: 1, height: isMobile ? 28 : 20, borderLeft: "1px solid #808080", borderRight: "1px solid #fff", margin: "0 2px" }} />
       {/* Window buttons */}
       {items.map((w) => (
-        <TaskbarButton key={w.label} label={w.label} href={w.href} />
+        <TaskbarButton key={w.label} label={w.label} href={w.href} isMobile={isMobile} />
       ))}
       <div style={{ flex: 1 }} />
       {/* System tray */}
       <div style={{
-        border: "1px inset #888", padding: "2px 8px", fontSize: 11,
+        border: "1px inset #888", padding: "2px 8px", fontSize: isMobile ? 13 : 11,
         display: "flex", alignItems: "center", gap: 8,
       }}>
-        <span style={{ fontSize: 10 }}>🔊</span>
-        <span style={{ fontSize: 16, lineHeight: "11px" }}>∞</span>
+        <span style={{ fontSize: isMobile ? 12 : 10 }}>🔊</span>
+        <span style={{ fontSize: isMobile ? 18 : 16, lineHeight: isMobile ? "13px" : "11px" }}>∞</span>
       </div>
     </div>
   );
@@ -874,7 +876,13 @@ function DesktopIcon({ label, icon, x, y }) {
 export default function RetroDesktop() {
   const time = useClock();
   const isMobile = useIsMobile();
-  const containerRef = useRef(null);
+  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 375);
+
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const windowTitles = [
     "George D. Fekaris - [cosmos.bmp]",
@@ -899,18 +907,26 @@ export default function RetroDesktop() {
   // CRT links — add later
   const crtLinks = [null, null, null];
 
-  // Auto-scroll to center the main window on mobile
-  useEffect(() => {
-    if (isMobile && containerRef.current) {
-      const vw = window.innerWidth;
-      containerRef.current.scrollLeft = (60 + 340) - vw / 2;
-      containerRef.current.scrollTop = 0;
-    }
-  }, [isMobile]);
+  // Mobile-specific window props
+  const mobileTitle = { titleFontSize: 13, titlePadding: "3px 6px" };
+
+  // Conditional CRT list
+  const crtSize = isMobile ? 56 : 70;
+  const crtW = isMobile ? 80 : 100;
+  const crtList = isMobile
+    ? [
+        { scene: <AnimatedSpaceScene width={crtW} height={crtSize} />, link: crtLinks[0] },
+        { scene: <AnimatedLandscapeScene width={crtW} height={crtSize} />, link: crtLinks[2] },
+      ]
+    : [
+        { scene: <AnimatedSpaceScene width={crtW} height={crtSize} />, link: crtLinks[0] },
+        { scene: <AnimatedStarMap width={crtW} height={crtSize} />, link: crtLinks[1] },
+        { scene: <AnimatedLandscapeScene width={crtW} height={crtSize} />, link: crtLinks[2] },
+      ];
 
   return (
-    <div ref={containerRef} style={{
-      position: "fixed", inset: 0, overflow: isMobile ? "auto" : "hidden", cursor: "default",
+    <div style={{
+      position: "fixed", inset: 0, overflow: "hidden", cursor: "default",
       background: `
         radial-gradient(ellipse at 30% 20%, #006868 0%, transparent 50%),
         radial-gradient(ellipse at 70% 80%, #005858 0%, transparent 50%),
@@ -919,24 +935,25 @@ export default function RetroDesktop() {
     }}>
       <ScanlineOverlay />
 
-      {/* Spacer to define scrollable area on mobile */}
-      {isMobile && (
-        <div style={{ position: "absolute", width: 960, height: 650, pointerEvents: "none" }} />
+      {/* Desktop Icons — hidden on mobile */}
+      {!isMobile && (
+        <>
+          <DesktopIcon label="My Computer" icon="🖥" x={16} y={12} />
+          <DesktopIcon label="Network" icon="🌐" x={16} y={90} />
+          <DesktopIcon label="Recycle Bin" icon="🗑" x={16} y={168} />
+          <DesktopIcon label="Galaxy DB" icon="🌌" x={16} y={246} />
+          <DesktopIcon label="Comm Link" icon="📡" x={16} y={324} />
+        </>
       )}
-
-      {/* Desktop Icons */}
-      <DesktopIcon label="My Computer" icon="🖥" x={16} y={12} />
-      <DesktopIcon label="Network" icon="🌐" x={16} y={90} />
-      <DesktopIcon label="Recycle Bin" icon="🗑" x={16} y={168} />
-      <DesktopIcon label="Galaxy DB" icon="🌌" x={16} y={246} />
-      <DesktopIcon label="Comm Link" icon="📡" x={16} y={324} />
 
       {/* Background space window - largest */}
       <Win31Window
         title={windowTitles[0]}
-        x={60} y={10} width={680} height={420}
+        x={isMobile ? 8 : 60} y={isMobile ? 8 : 10}
+        width={isMobile ? vw - 16 : 680} height={isMobile ? 220 : 420}
         zIndex={1}
         href={windowLinks[0]}
+        {...(isMobile ? mobileTitle : {})}
       >
         <SpaceScene width={680} height={370} />
       </Win31Window>
@@ -944,9 +961,11 @@ export default function RetroDesktop() {
       {/* Center landscape */}
       <Win31Window
         title={windowTitles[1]}
-        x={200} y={100} width={420} height={320}
+        x={isMobile ? 16 : 200} y={isMobile ? 185 : 100}
+        width={isMobile ? vw - 32 : 420} height={isMobile ? 190 : 320}
         zIndex={2}
         href={windowLinks[1]}
+        {...(isMobile ? mobileTitle : {})}
       >
         <LandscapeScene width={420} height={270} />
       </Win31Window>
@@ -954,61 +973,68 @@ export default function RetroDesktop() {
       {/* Bio-dome left */}
       <Win31Window
         title={windowTitles[2]}
-        x={20} y={220} width={220} height={200}
+        x={isMobile ? 24 : 20} y={isMobile ? 335 : 220}
+        width={isMobile ? vw - 48 : 220} height={isMobile ? 170 : 200}
         zIndex={3}
         href={windowLinks[2]}
+        {...(isMobile ? mobileTitle : {})}
       >
         <DomeScene width={220} height={150} />
       </Win31Window>
 
-      {/* Data screen right */}
-      <Win31Window
-        title={windowTitles[3]}
-        x={600} y={200} width={240} height={200}
-        zIndex={4}
-      >
-        <DataScreen width={240} height={150} />
-      </Win31Window>
+      {/* Unlinked windows — hidden on mobile */}
+      {!isMobile && (
+        <>
+          {/* Data screen right */}
+          <Win31Window
+            title={windowTitles[3]}
+            x={600} y={200} width={240} height={200}
+            zIndex={4}
+          >
+            <DataScreen width={240} height={150} />
+          </Win31Window>
 
-      {/* Star map */}
-      <Win31Window
-        title={windowTitles[4]}
-        x={500} y={380} width={260} height={200}
-        zIndex={5}
-      >
-        <StarMap width={260} height={150} />
-      </Win31Window>
+          {/* Star map */}
+          <Win31Window
+            title={windowTitles[4]}
+            x={500} y={380} width={260} height={200}
+            zIndex={5}
+          >
+            <StarMap width={260} height={150} />
+          </Win31Window>
 
-      {/* Desert bottom left */}
-      <Win31Window
-        title={windowTitles[5]}
-        x={30} y={430} width={230} height={170}
-        zIndex={6}
-      >
-        <DesertScene width={230} height={120} />
-      </Win31Window>
+          {/* Desert bottom left */}
+          <Win31Window
+            title={windowTitles[5]}
+            x={30} y={430} width={230} height={170}
+            zIndex={6}
+          >
+            <DesertScene width={230} height={120} />
+          </Win31Window>
 
-      {/* Pie chart */}
-      <Win31Window
-        title={windowTitles[6]}
-        x={720} y={420} width={210} height={180}
-        zIndex={7}
-      >
-        <PieChart width={210} height={130} />
-      </Win31Window>
+          {/* Pie chart */}
+          <Win31Window
+            title={windowTitles[6]}
+            x={720} y={420} width={210} height={180}
+            zIndex={7}
+          >
+            <PieChart width={210} height={130} />
+          </Win31Window>
+        </>
+      )}
 
       {/* CRT Monitors row at bottom */}
       <div style={{
-        position: "absolute", bottom: 40, left: 100, display: "flex", gap: 20,
+        position: "absolute",
+        bottom: isMobile ? 52 : 40,
+        left: isMobile ? "50%" : 100,
+        transform: isMobile ? "translateX(-50%)" : undefined,
+        display: "flex", gap: 20,
         zIndex: 8,
       }}>
-        {[
-          { scene: <AnimatedSpaceScene width={100} height={70} />, link: crtLinks[0] },
-          { scene: <AnimatedStarMap width={100} height={70} />, link: crtLinks[1] },
-          { scene: <AnimatedLandscapeScene width={100} height={70} />, link: crtLinks[2] },
-        ].map((crt, i) => (
-          <CRTMonitor key={i} scale={0.7} href={crt.link}>
-            <div style={{ width: 100, height: 70 }}>
+        {crtList.map((crt, i) => (
+          <CRTMonitor key={i} scale={isMobile ? 0.6 : 0.7} href={crt.link}>
+            <div style={{ width: crtW, height: crtSize }}>
               {crt.scene}
             </div>
           </CRTMonitor>
