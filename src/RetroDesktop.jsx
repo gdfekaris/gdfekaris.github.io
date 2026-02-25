@@ -957,8 +957,8 @@ export default function RetroDesktop() {
       {/* Center landscape */}
       <Win31Window
         title={windowTitles[1]}
-        x={isMobile ? vw - 180 : 200} y={isMobile ? 220 : 100}
-        width={isMobile ? 170 : 420} height={isMobile ? 170 : 320}
+        x={isMobile ? vw - 230 : 200} y={isMobile ? 220 : 100}
+        width={isMobile ? 220 : 420} height={isMobile ? 220 : 320}
         zIndex={2}
         href={windowLinks[1]}
         {...(isMobile ? mobileTitle : {})}
@@ -969,8 +969,8 @@ export default function RetroDesktop() {
       {/* Bio-dome left */}
       <Win31Window
         title={windowTitles[2]}
-        x={isMobile ? 10 : 20} y={isMobile ? 350 : 220}
-        width={isMobile ? 170 : 220} height={isMobile ? 170 : 200}
+        x={isMobile ? 10 : 20} y={isMobile ? 400 : 220}
+        width={isMobile ? 220 : 220} height={isMobile ? 220 : 200}
         zIndex={3}
         href={windowLinks[2]}
         {...(isMobile ? mobileTitle : {})}
