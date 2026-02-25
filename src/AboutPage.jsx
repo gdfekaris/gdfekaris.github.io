@@ -1,4 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+function useIsMobile(breakpoint = 768) {
+  const [mobile, setMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return mobile;
+}
 
 const WIN_COLORS = {
   titleBar: "#000080",
@@ -155,6 +167,7 @@ function Ruler() {
 
 /* ── Main About Page ── */
 export default function AboutPage() {
+  const isMobile = useIsMobile();
   const toolbarItems = [
     "New",
     "Open",
@@ -326,10 +339,11 @@ export default function AboutPage() {
             {/* White document page */}
             <div
               style={{
-                width: 640,
+                width: isMobile ? "auto" : 640,
                 minHeight: 800,
                 background: "#fff",
-                padding: "60px 72px",
+                padding: isMobile ? "32px 20px" : "60px 72px",
+                margin: isMobile ? "0 8px" : undefined,
                 boxShadow: "2px 2px 8px rgba(0,0,0,0.3)",
                 fontFamily: '"Times New Roman", "MS Serif", serif',
                 fontSize: 14,

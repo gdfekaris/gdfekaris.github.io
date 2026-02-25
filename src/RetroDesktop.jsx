@@ -1,5 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
+function useIsMobile(breakpoint = 768) {
+  const [mobile, setMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return mobile;
+}
+
 const PIXEL_BORDER = "2px solid";
 const WIN_COLORS = {
   titleBar: "#000080",
@@ -602,6 +614,27 @@ function Win31Window({
     window.addEventListener("mouseup", onUp);
   }, [pos]);
 
+  const onTouchStart = useCallback((e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    dragging.current = true;
+    offset.current = { x: touch.clientX - pos.x, y: touch.clientY - pos.y };
+    const onMove = (e2) => {
+      e2.preventDefault();
+      if (dragging.current) {
+        const t = e2.touches[0];
+        setPos({ x: t.clientX - offset.current.x, y: t.clientY - offset.current.y });
+      }
+    };
+    const onEnd = () => {
+      dragging.current = false;
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd);
+  }, [pos]);
+
   if (minimized) return null;
 
   return (
@@ -634,6 +667,7 @@ function Win31Window({
           {/* title bar */}
           <div
             onMouseDown={onMouseDown}
+            onTouchStart={onTouchStart}
             style={{
               background: `linear-gradient(90deg, ${WIN_COLORS.titleBar}, #1084d0)`,
               color: WIN_COLORS.titleText,
@@ -743,7 +777,8 @@ function TaskbarButton({ label, href }) {
   );
 }
 
-function Taskbar({ windows }) {
+function Taskbar({ windows, isMobile }) {
+  const items = isMobile ? windows.filter(w => w.href) : windows;
   return (
     <div style={{
       position: "fixed", bottom: 0, left: 0, right: 0, height: 32, zIndex: 9999,
@@ -771,7 +806,7 @@ function Taskbar({ windows }) {
       </button>
       <div style={{ width: 1, height: 20, borderLeft: "1px solid #808080", borderRight: "1px solid #fff", margin: "0 2px" }} />
       {/* Window buttons */}
-      {windows.map((w) => (
+      {items.map((w) => (
         <TaskbarButton key={w.label} label={w.label} href={w.href} />
       ))}
       <div style={{ flex: 1 }} />
@@ -838,6 +873,8 @@ function DesktopIcon({ label, icon, x, y }) {
 /* ── Main App ── */
 export default function RetroDesktop() {
   const time = useClock();
+  const isMobile = useIsMobile();
+  const containerRef = useRef(null);
 
   const windowTitles = [
     "George D. Fekaris - [cosmos.bmp]",
@@ -862,9 +899,18 @@ export default function RetroDesktop() {
   // CRT links — add later
   const crtLinks = [null, null, null];
 
+  // Auto-scroll to center the main window on mobile
+  useEffect(() => {
+    if (isMobile && containerRef.current) {
+      const vw = window.innerWidth;
+      containerRef.current.scrollLeft = (60 + 340) - vw / 2;
+      containerRef.current.scrollTop = 0;
+    }
+  }, [isMobile]);
+
   return (
-    <div style={{
-      position: "fixed", inset: 0, overflow: "hidden", cursor: "default",
+    <div ref={containerRef} style={{
+      position: "fixed", inset: 0, overflow: isMobile ? "auto" : "hidden", cursor: "default",
       background: `
         radial-gradient(ellipse at 30% 20%, #006868 0%, transparent 50%),
         radial-gradient(ellipse at 70% 80%, #005858 0%, transparent 50%),
@@ -872,6 +918,11 @@ export default function RetroDesktop() {
       `,
     }}>
       <ScanlineOverlay />
+
+      {/* Spacer to define scrollable area on mobile */}
+      {isMobile && (
+        <div style={{ position: "absolute", width: 960, height: 650, pointerEvents: "none" }} />
+      )}
 
       {/* Desktop Icons */}
       <DesktopIcon label="My Computer" icon="🖥" x={16} y={12} />
@@ -966,6 +1017,7 @@ export default function RetroDesktop() {
 
       {/* Taskbar */}
       <Taskbar
+        isMobile={isMobile}
         windows={[
           { label: "George D. Fekaris", href: "/about" },
           { label: "LinkedIn", href: "https://www.linkedin.com/in/george-dino-fekaris/" },
