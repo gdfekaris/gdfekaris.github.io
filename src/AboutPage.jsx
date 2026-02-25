@@ -349,18 +349,41 @@ export default function AboutPage() {
               >
                 About Me
               </h1>
-              <p style={{ marginBottom: 12 }}>George D. Fekaris</p>
               <p style={{ marginBottom: 12 }}>
-                Welcome to my corner of the information superhighway.
+                George D. Fekaris writes technical documentation and designs
+                technical content delivery strategies. He has done it for six
+                years in application security, building docs for CLIs and APIs
+                and CI/CD integrations, working with docs as code the way
+                writers once worked in typeset. He has designed more than sixty
+                training modules. Over a thousand people use them every month.
+                He works with AI tools now, in his{" "}
+                <a
+                  href="https://documentation.blackduck.com/bundle/bridge/page/documentation/c_overview.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "#000080" }}
+                >
+                  professional docs work
+                </a>{" "}
+                and on his own time, during which he builds{" "}
+                <a
+                  href="https://github.com/gdfekaris"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "#000080" }}
+                >
+                  open-source projects
+                </a>{" "}
+                that show what he knows about security and writing clearly.
               </p>
-              <p
-                style={{
-                  marginBottom: 12,
-                  color: "#808080",
-                  fontStyle: "italic",
-                }}
-              >
-                [Content coming soon — this document is under construction]
+              <p style={{ marginBottom: 12 }}>
+                Before any of that, he taught. Eight years of composition and
+                creative writing. He studied poetry and English and philosophy,
+                and he earned the degrees to prove it. That training never left.
+                Close reading, rhetorical precision, the habit of caring whether
+                a sentence does what it is supposed to do, he still carries all
+                of it. The best documentation and design, he believes, have more
+                in common with good prose and poetry than most people admit.
               </p>
             </div>
           </div>
