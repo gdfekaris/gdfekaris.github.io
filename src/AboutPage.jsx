@@ -370,7 +370,7 @@ export default function AboutPage() {
                 and CI/CD integrations, working with docs as code the way
                 writers once worked in typeset. He has designed more than sixty
                 training modules. Over a thousand people use them every month.
-                He works with AI tools now, in his{" "}
+                He works with AI tools, in his{" "}
                 <a
                   href="https://documentation.blackduck.com/bundle/bridge/page/documentation/c_overview.html"
                   target="_blank"
@@ -379,7 +379,7 @@ export default function AboutPage() {
                 >
                   professional docs work
                 </a>{" "}
-                and on his own time, during which he builds{" "}
+                and on his own time. He builds{" "}
                 <a
                   href="https://github.com/gdfekaris"
                   target="_blank"
