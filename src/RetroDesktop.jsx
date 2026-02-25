@@ -593,6 +593,7 @@ function Win31Window({
   href = null,
   titleFontSize = 11,
   titlePadding = "2px 4px",
+  isMobile = false,
 }) {
   const [hovered, setHovered] = useState(false);
   const [pos, setPos] = useState({ x: initialX, y: initialY });
@@ -725,8 +726,8 @@ function Win31Window({
             }}
           >
             {children}
-            {/* hover overlay for linked windows */}
-            {href && hovered && (
+            {/* hover overlay for linked windows (desktop only) */}
+            {href && !isMobile && hovered && (
               <div style={{
                 position: "absolute", inset: 0,
                 background: "rgba(0,0,128,0.15)",
@@ -740,6 +741,19 @@ function Win31Window({
                 }}>
                   OPEN →
                 </span>
+              </div>
+            )}
+            {/* persistent tap hint for linked windows (mobile only) */}
+            {href && isMobile && (
+              <div style={{
+                position: "absolute", bottom: 4, right: 4, zIndex: 2,
+                background: "rgba(0,0,0,0.55)", color: "#fff",
+                padding: "2px 6px", fontSize: 9, fontWeight: "bold",
+                border: "1px solid rgba(255,255,255,0.5)",
+                letterSpacing: 0.5, pointerEvents: "none",
+                fontFamily: '"MS Sans Serif", Arial, sans-serif',
+              }}>
+                TAP ↗
               </div>
             )}
           </div>
@@ -949,6 +963,7 @@ export default function RetroDesktop() {
         width={isMobile ? vw - 16 : 680} height={isMobile ? 260 : 420}
         zIndex={1}
         href={windowLinks[0]}
+        isMobile={isMobile}
         {...(isMobile ? mobileTitle : {})}
       >
         <SpaceScene width={680} height={370} />
@@ -961,6 +976,7 @@ export default function RetroDesktop() {
         width={isMobile ? 250 : 420} height={isMobile ? 220 : 320}
         zIndex={2}
         href={windowLinks[1]}
+        isMobile={isMobile}
         {...(isMobile ? mobileTitle : {})}
       >
         <LandscapeScene width={420} height={270} />
@@ -973,6 +989,7 @@ export default function RetroDesktop() {
         width={isMobile ? 220 : 220} height={isMobile ? 220 : 200}
         zIndex={3}
         href={windowLinks[2]}
+        isMobile={isMobile}
         {...(isMobile ? mobileTitle : {})}
       >
         <DomeScene width={220} height={150} />
