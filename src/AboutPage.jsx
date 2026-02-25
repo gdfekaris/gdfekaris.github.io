@@ -152,7 +152,7 @@ function Ruler() {
       <div
         style={{
           position: "absolute",
-          left: 60 + 13 * 48,
+          left: 60 + 16 * 48,
           bottom: 0,
           width: 0,
           height: 0,
