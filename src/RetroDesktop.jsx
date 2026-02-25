@@ -846,7 +846,7 @@ export default function RetroDesktop() {
     "Sensor Array Data",
     "Star Chart v2.4",
     "Desert Recon - Sector 7",
-    "Colony Statistics",
+    "Outpost Statistics",
   ];
 
   const windowLinks = {
@@ -856,7 +856,7 @@ export default function RetroDesktop() {
     // 3: null,  // Sensor Array Data — add link later
     // 4: null,  // Star Chart v2.4 — add link later
     // 5: null,  // Desert Recon - Sector 7 — add link later
-    // 6: null,  // Colony Statistics — add link later
+    // 6: null,  // Outpost Statistics — add link later
   };
 
   // CRT links — add later
