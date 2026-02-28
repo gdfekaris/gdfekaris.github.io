@@ -364,6 +364,9 @@ export default function AboutPage() {
                 About Me
               </h1>
               <p style={{ marginBottom: 12 }}>
+                I do hope you'll forgive the presumption of a page like this. That said, it's all true . . .
+              </p>
+              <p style={{ marginBottom: 12 }}>
                 George D. Fekaris writes technical documentation and designs
                 technical content delivery strategies. He has done it for six
                 years in application security, building docs for CLIs and APIs
