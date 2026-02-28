@@ -382,7 +382,7 @@ export default function AboutPage() {
                 >
                   professional docs work
                 </a>{" "}
-                and on his own time. He builds{" "}
+                and on his own time. As a hobbyist, he writes poems and builds{" "}
                 <a
                   href="https://github.com/gdfekaris"
                   target="_blank"
