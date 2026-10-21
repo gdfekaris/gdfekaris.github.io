@@ -3,8 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <script>
-      // Redirect all 404s to index.html for SPA client-side routing
-      window.location.replace('/' + window.location.search + window.location.hash);
+      // Redirect all 404s to index.html for SPA client-side routing,
+      // carrying the requested path in ?p= so main.jsx can restore it
+      var l = window.location;
+      window.location.replace('/?p=' + encodeURIComponent(l.pathname) +
+        (l.search ? '&' + l.search.slice(1) : '') + l.hash);
     </script>
   </head>
   <body></body>

@@ -3,6 +3,17 @@ import ReactDOM from 'react-dom/client'
 import RetroDesktop from './RetroDesktop.jsx'
 import AboutPage from './AboutPage.jsx'
 
+// Restore a deep link forwarded by public/404.html as ?p=/path
+const params = new URLSearchParams(window.location.search);
+const redirect = params.get('p');
+if (redirect) {
+  params.delete('p');
+  const query = params.toString();
+  // Only same-origin paths ("//host" or "/\host" would be cross-origin and throw)
+  const path = /^\/(?![\/\\])/.test(redirect) ? redirect : '/';
+  history.replaceState(null, '', path + (query ? '?' + query : '') + window.location.hash);
+}
+
 function App() {
   const [path, setPath] = useState(window.location.pathname);
 
@@ -12,7 +23,9 @@ function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  if (path === '/about') return <AboutPage />;
+  // Ignore trailing slashes so /about/ matches /about
+  const route = path.replace(/\/+$/, '') || '/';
+  if (route === '/about') return <AboutPage />;
   return <RetroDesktop />;
 }
 
