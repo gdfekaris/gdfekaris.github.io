@@ -1,15 +1,30 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 
-function useIsMobile(breakpoint = 768) {
-  const [mobile, setMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
-  );
+function useViewport() {
+  const read = () => ({ w: window.innerWidth, h: window.innerHeight });
+  const [vp, setVp] = useState(read);
   useEffect(() => {
-    const check = () => setMobile(window.innerWidth < breakpoint);
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, [breakpoint]);
-  return mobile;
+    const onResize = () => setVp(read());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return vp;
+}
+
+// Size of an element, kept current with ResizeObserver
+function useElementSize(ref, fallback) {
+  const [size, setSize] = useState(fallback);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setSize((s) =>
+      s.w === el.clientWidth && s.h === el.clientHeight ? s : { w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return size;
 }
 
 const PIXEL_BORDER = "2px solid";
@@ -90,7 +105,7 @@ function SpaceScene({ width = 320, height = 200 }) {
       ctx.fillRect(x, y, 1 + Math.floor(rng() * 2), 1);
     }
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function LandscapeScene({ width = 280, height = 180 }) {
@@ -139,7 +154,7 @@ function LandscapeScene({ width = 280, height = 180 }) {
       }
     }
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function DomeScene({ width = 200, height = 160 }) {
@@ -180,7 +195,7 @@ function DomeScene({ width = 200, height = 160 }) {
       ctx.fillRect(x, y, 1 + Math.floor(rng() * 3), 1);
     }
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function DataScreen({ width = 200, height = 150 }) {
@@ -211,7 +226,7 @@ function DataScreen({ width = 200, height = 150 }) {
       ctx.fillRect(x, y, 2, 2);
     }
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function StarMap({ width = 220, height = 160 }) {
@@ -251,7 +266,7 @@ function StarMap({ width = 220, height = 160 }) {
       ctx.fillRect(Math.floor(cx), Math.floor(cy), 2, 2);
     }
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function DesertScene({ width = 200, height = 130 }) {
@@ -273,7 +288,7 @@ function DesertScene({ width = 200, height = 130 }) {
       }
     }
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function PieChart({ width = 180, height = 140 }) {
@@ -303,7 +318,7 @@ function PieChart({ width = 180, height = 140 }) {
       ctx.fillRect(22, 12 + i * 14, 30 + Math.floor(rng() * 30), 4);
     }
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 /* ── Animated canvas hook (for CRT monitors) ── */
@@ -324,7 +339,7 @@ function useAnimatedCanvas(width, height, setupFn) {
     };
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, []);
+  }, [width, height]);
   return ref;
 }
 
@@ -383,7 +398,7 @@ function AnimatedSpaceScene({ width = 100, height = 70 }) {
       }
     };
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function AnimatedStarMap({ width = 100, height = 70 }) {
@@ -449,7 +464,7 @@ function AnimatedStarMap({ width = 100, height = 70 }) {
       }
     };
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 function AnimatedLandscapeScene({ width = 100, height = 70 }) {
@@ -519,7 +534,7 @@ function AnimatedLandscapeScene({ width = 100, height = 70 }) {
       }
     };
   });
-  return <canvas ref={ref} style={{ width: "100%", height: "100%", imageRendering: "pixelated", display: "block" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
 /* ── CRT Monitor component ── */
@@ -594,49 +609,41 @@ function Win31Window({
   titleFontSize = 11,
   titlePadding = "2px 4px",
   isMobile = false,
+  bounds = null, // { w, h } of the area the window may be dragged within
+  scale = 1,     // CSS scale applied by the parent, to convert pointer deltas
 }) {
   const [hovered, setHovered] = useState(false);
   const [pos, setPos] = useState({ x: initialX, y: initialY });
-  const dragging = useRef(false);
-  const offset = useRef({ x: 0, y: 0 });
 
-  const onMouseDown = useCallback((e) => {
-    dragging.current = true;
-    offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-    const onMove = (e2) => {
-      if (dragging.current) {
-        setPos({ x: e2.clientX - offset.current.x, y: e2.clientY - offset.current.y });
-      }
-    };
-    const onUp = () => {
-      dragging.current = false;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  }, [pos]);
+  // Snap back to the layout position whenever the layout changes (resize/rotate)
+  useEffect(() => {
+    setPos({ x: initialX, y: initialY });
+  }, [initialX, initialY]);
 
-  const onTouchStart = useCallback((e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    dragging.current = true;
-    offset.current = { x: touch.clientX - pos.x, y: touch.clientY - pos.y };
+  // Pointer events cover mouse, touch and pen in one path; capture keeps the
+  // drag alive outside the title bar, and pointercancel ends interrupted drags.
+  const onPointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    const bar = e.currentTarget;
+    const start = { cx: e.clientX, cy: e.clientY, x: pos.x, y: pos.y };
+    // Keep at least part of the title bar reachable
+    const clamp = (x, y) => bounds ? {
+      x: Math.min(Math.max(x, 60 - width), bounds.w - 60),
+      y: Math.min(Math.max(y, 0), bounds.h - 30),
+    } : { x, y };
     const onMove = (e2) => {
-      e2.preventDefault();
-      if (dragging.current) {
-        const t = e2.touches[0];
-        setPos({ x: t.clientX - offset.current.x, y: t.clientY - offset.current.y });
-      }
+      setPos(clamp(start.x + (e2.clientX - start.cx) / scale, start.y + (e2.clientY - start.cy) / scale));
     };
     const onEnd = () => {
-      dragging.current = false;
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend", onEnd);
+      bar.removeEventListener("pointermove", onMove);
+      bar.removeEventListener("pointerup", onEnd);
+      bar.removeEventListener("pointercancel", onEnd);
     };
-    window.addEventListener("touchmove", onMove, { passive: false });
-    window.addEventListener("touchend", onEnd);
-  }, [pos]);
+    bar.setPointerCapture(e.pointerId);
+    bar.addEventListener("pointermove", onMove);
+    bar.addEventListener("pointerup", onEnd);
+    bar.addEventListener("pointercancel", onEnd);
+  }, [pos, bounds, scale, width]);
 
   if (minimized) return null;
 
@@ -669,9 +676,9 @@ function Win31Window({
         }}>
           {/* title bar */}
           <div
-            onMouseDown={onMouseDown}
-            onTouchStart={onTouchStart}
+            onPointerDown={onPointerDown}
             style={{
+              touchAction: "none",
               background: `linear-gradient(90deg, ${WIN_COLORS.titleBar}, #1084d0)`,
               color: WIN_COLORS.titleText,
               padding: titlePadding,
@@ -764,6 +771,8 @@ function Win31Window({
 }
 
 /* ── Taskbar ── */
+const taskbarHeight = (isMobile) => (isMobile ? 44 : 32);
+
 function TaskbarButton({ label, href, isMobile }) {
   const [hovered, setHovered] = useState(false);
   const hasLink = !!href;
@@ -784,7 +793,8 @@ function TaskbarButton({ label, href, isMobile }) {
         border: "1px inset #888",
         background: hovered ? "#c8c8c8" : "#b8b8b8",
         cursor: hasLink ? "pointer" : "default",
-        maxWidth: 120, overflow: "hidden",
+        // Long labels give up space first so short ones stay readable
+        maxWidth: isMobile ? 180 : 120, minWidth: 0, flexShrink: label.length > 12 ? 1 : 0, overflow: "hidden",
         textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "inherit",
       }}
     >
@@ -793,14 +803,19 @@ function TaskbarButton({ label, href, isMobile }) {
   );
 }
 
-function Taskbar({ windows, isMobile }) {
+function Taskbar({ windows, isMobile, showTray = true }) {
   const items = isMobile ? windows.filter(w => w.href) : windows;
   return (
     <div style={{
-      position: "fixed", bottom: 0, left: 0, right: 0, height: isMobile ? 44 : 32, zIndex: 9999,
+      position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999,
+      // Extend under the iPhone home indicator, keeping buttons above it
+      height: `calc(${taskbarHeight(isMobile)}px + env(safe-area-inset-bottom, 0px))`,
+      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      paddingLeft: "max(4px, env(safe-area-inset-left, 0px))",
+      paddingRight: "max(4px, env(safe-area-inset-right, 0px))",
       background: WIN_COLORS.bg,
       borderTop: `2px solid ${WIN_COLORS.borderLight}`,
-      display: "flex", alignItems: "center", padding: "0 4px", gap: 2,
+      display: "flex", alignItems: "center", gap: 2,
       fontFamily: '"MS Sans Serif", Arial, sans-serif', fontSize: isMobile ? 13 : 11,
       boxShadow: "0 -1px 0 #808080",
     }}>
@@ -810,7 +825,7 @@ function Taskbar({ windows, isMobile }) {
         style={{
         height: isMobile ? 30 : 24, padding: "0 8px", fontWeight: "bold", fontSize: isMobile ? 13 : 11,
         border: "2px outset #ddd", background: "#c0c0c0", cursor: "pointer",
-        display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit",
+        display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit", flexShrink: 0,
       }}>
         <svg width="16" height="16" viewBox="0 0 16 16" style={{ display: "block" }}>
           <polygon points="8,1 15,8 8,15 1,8" fill="#000080" />
@@ -820,20 +835,20 @@ function Taskbar({ windows, isMobile }) {
         </svg>
         Home
       </button>
-      <div style={{ width: 1, height: isMobile ? 28 : 20, borderLeft: "1px solid #808080", borderRight: "1px solid #fff", margin: "0 2px" }} />
+      <div style={{ flexShrink: 0, width: 1, height: isMobile ? 28 : 20, borderLeft: "1px solid #808080", borderRight: "1px solid #fff", margin: "0 2px" }} />
       {/* Window buttons */}
       {items.map((w) => (
         <TaskbarButton key={w.label} label={w.label} href={w.href} isMobile={isMobile} />
       ))}
       <div style={{ flex: 1 }} />
       {/* System tray */}
-      <div style={{
+      {showTray && <div style={{
         border: "1px inset #888", padding: "2px 8px", fontSize: isMobile ? 13 : 11,
         display: "flex", alignItems: "center", gap: 8,
       }}>
         <span style={{ fontSize: isMobile ? 12 : 10 }}>🔊</span>
         <span style={{ fontSize: isMobile ? 18 : 16, lineHeight: isMobile ? "13px" : "11px" }}>∞</span>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -886,37 +901,77 @@ function DesktopIcon({ label, icon, x, y }) {
   );
 }
 
+/* ── Layout ── */
+// "desktop": free-form windows, scaled down to fit when the screen is small.
+// "portrait": the linked windows stacked to fill an upright phone or tablet.
+// "landscape": short screens (phones on their side) — only linked windows fit.
+function getMode({ w, h }) {
+  if (h < 480 && w > h) return "landscape";
+  if (w < 768 || (h > w && w < 1100)) return "portrait";
+  return "desktop";
+}
+
+// The desktop layout is designed for this area and scaled to fit smaller ones
+const DESIGN = { w: 940, h: 600 };
+// Space the mobile CRT row takes, including the gaps around it
+const CRT_ROW_H = 114;
+
+const WINDOWS = [
+  { title: "George D. Fekaris - [cosmos.bmp]", href: "/about",
+    rect: { x: 60, y: 10, w: 680, h: 420 }, scene: <SpaceScene width={680} height={370} /> },
+  { title: "LinkedIn - [planet_surface.dat]", href: "https://www.linkedin.com/in/george-dino-fekaris/",
+    rect: { x: 200, y: 100, w: 420, h: 320 }, scene: <LandscapeScene width={420} height={270} /> },
+  { title: "GitHub - [bio_dome.bmp]", href: "https://github.com/gdfekaris",
+    rect: { x: 20, y: 220, w: 220, h: 200 }, scene: <DomeScene width={220} height={150} /> },
+  // Unlinked windows (desktop only) — add an href to link them later
+  { title: "Sensor Array Data",
+    rect: { x: 600, y: 200, w: 240, h: 200 }, scene: <DataScreen width={240} height={150} /> },
+  { title: "Star Chart v2.4",
+    rect: { x: 500, y: 380, w: 260, h: 200 }, scene: <StarMap width={260} height={150} /> },
+  { title: "Desert Recon - Sector 7",
+    rect: { x: 30, y: 430, w: 230, h: 170 }, scene: <DesertScene width={230} height={120} /> },
+  { title: "Outpost Statistics",
+    rect: { x: 720, y: 420, w: 210, h: 180 }, scene: <PieChart width={210} height={130} /> },
+];
+
+// Rects for the three linked windows on compact screens, filling a W×H area
+function compactRects(mode, W, H) {
+  const r = Math.round;
+  if (mode === "landscape") {
+    const w = r(W * 0.38);
+    return [
+      { x: 8, y: 8, w, h: H - 16 },
+      { x: r(W * 0.31), y: 20, w, h: H - 28 },
+      { x: W - w - 8, y: 32, w, h: H - 40 },
+    ];
+  }
+  // Portrait: wide window on top, two overlapping windows below it
+  const w1 = r(W * 0.67);
+  return [
+    { x: 8, y: 8, w: W - 16, h: r(H * 0.46) },
+    { x: W - w1 - 10, y: r(H * 0.39), w: w1, h: r(H * 0.39) },
+    { x: 10, y: r(H * 0.61), w: r(W * 0.59), h: r(H * 0.39) - 8 },
+  ];
+}
+
 /* ── Main App ── */
 export default function RetroDesktop() {
   const time = useClock();
-  const isMobile = useIsMobile();
-  const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 375);
+  const viewport = useViewport();
+  const mode = getMode(viewport);
+  const isMobile = mode !== "desktop";
 
-  useEffect(() => {
-    const onResize = () => setVw(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  // Desktop area above the taskbar and inside any safe-area insets
+  const areaRef = useRef(null);
+  const area = useElementSize(areaRef, { w: viewport.w, h: viewport.h - taskbarHeight(isMobile) });
 
-  const windowTitles = [
-    "George D. Fekaris - [cosmos.bmp]",
-    "LinkedIn - [planet_surface.dat]",
-    "GitHub - [bio_dome.bmp]",
-    "Sensor Array Data",
-    "Star Chart v2.4",
-    "Desert Recon - Sector 7",
-    "Outpost Statistics",
-  ];
-
-  const windowLinks = {
-    0: "/about",                                    // About me page (internal)
-    1: "https://www.linkedin.com/in/george-dino-fekaris/",
-    2: "https://github.com/gdfekaris",
-    // 3: null,  // Sensor Array Data — add link later
-    // 4: null,  // Star Chart v2.4 — add link later
-    // 5: null,  // Desert Recon - Sector 7 — add link later
-    // 6: null,  // Outpost Statistics — add link later
-  };
+  const scale = isMobile ? 1 : Math.min(1, area.w / DESIGN.w, area.h / DESIGN.h);
+  const showCrts = !isMobile || (mode === "portrait" && area.h >= 560);
+  const windows = isMobile ? WINDOWS.filter((w) => w.href) : WINDOWS;
+  const rects = isMobile
+    ? compactRects(mode, area.w, area.h - (showCrts ? CRT_ROW_H : 0))
+    : windows.map((w) => w.rect);
+  const bounds = { w: area.w / scale, h: area.h / scale };
 
   // CRT links — add later
   const crtLinks = [null, null, null];
@@ -949,114 +1004,71 @@ export default function RetroDesktop() {
     }}>
       <ScanlineOverlay />
 
-      {/* Desktop Icons */}
-      <DesktopIcon label="My Computer" icon="🖥" x={16} y={12} />
-      <DesktopIcon label="Network" icon="🌐" x={16} y={90} />
-      <DesktopIcon label="Recycle Bin" icon="🗑" x={16} y={168} />
-      <DesktopIcon label="Galaxy DB" icon="🌌" x={16} y={246} />
-      <DesktopIcon label="Comm Link" icon="📡" x={16} y={324} />
-
-      {/* Background space window - largest */}
-      <Win31Window
-        title={windowTitles[0]}
-        x={isMobile ? 8 : 60} y={isMobile ? 8 : 10}
-        width={isMobile ? vw - 16 : 680} height={isMobile ? 260 : 420}
-        zIndex={1}
-        href={windowLinks[0]}
-        isMobile={isMobile}
-        {...(isMobile ? mobileTitle : {})}
-      >
-        <SpaceScene width={680} height={370} />
-      </Win31Window>
-
-      {/* Center landscape */}
-      <Win31Window
-        title={windowTitles[1]}
-        x={isMobile ? vw - 260 : 200} y={isMobile ? 220 : 100}
-        width={isMobile ? 250 : 420} height={isMobile ? 220 : 320}
-        zIndex={2}
-        href={windowLinks[1]}
-        isMobile={isMobile}
-        {...(isMobile ? mobileTitle : {})}
-      >
-        <LandscapeScene width={420} height={270} />
-      </Win31Window>
-
-      {/* Bio-dome left */}
-      <Win31Window
-        title={windowTitles[2]}
-        x={isMobile ? 10 : 20} y={isMobile ? 340 : 220}
-        width={isMobile ? 220 : 220} height={isMobile ? 220 : 200}
-        zIndex={3}
-        href={windowLinks[2]}
-        isMobile={isMobile}
-        {...(isMobile ? mobileTitle : {})}
-      >
-        <DomeScene width={220} height={150} />
-      </Win31Window>
-
-      {/* Unlinked windows — hidden on mobile */}
-      {!isMobile && (
-        <>
-          {/* Data screen right */}
-          <Win31Window
-            title={windowTitles[3]}
-            x={600} y={200} width={240} height={200}
-            zIndex={4}
-          >
-            <DataScreen width={240} height={150} />
-          </Win31Window>
-
-          {/* Star map */}
-          <Win31Window
-            title={windowTitles[4]}
-            x={500} y={380} width={260} height={200}
-            zIndex={5}
-          >
-            <StarMap width={260} height={150} />
-          </Win31Window>
-
-          {/* Desert bottom left */}
-          <Win31Window
-            title={windowTitles[5]}
-            x={30} y={430} width={230} height={170}
-            zIndex={6}
-          >
-            <DesertScene width={230} height={120} />
-          </Win31Window>
-
-          {/* Pie chart */}
-          <Win31Window
-            title={windowTitles[6]}
-            x={720} y={420} width={210} height={180}
-            zIndex={7}
-          >
-            <PieChart width={210} height={130} />
-          </Win31Window>
-        </>
-      )}
-
-      {/* CRT Monitors row at bottom */}
-      <div style={{
-        position: "absolute",
-        bottom: isMobile ? 52 : 40,
-        left: isMobile ? "50%" : 100,
-        transform: isMobile ? "translateX(-50%)" : undefined,
-        display: "flex", gap: 20,
-        zIndex: 8,
+      <div ref={areaRef} style={{
+        position: "absolute", overflow: "hidden",
+        top: "env(safe-area-inset-top, 0px)",
+        left: "env(safe-area-inset-left, 0px)",
+        right: "env(safe-area-inset-right, 0px)",
+        bottom: `calc(${taskbarHeight(isMobile)}px + env(safe-area-inset-bottom, 0px))`,
       }}>
-        {crtList.map((crt, i) => (
-          <CRTMonitor key={i} scale={isMobile ? 0.6 : 0.7} href={crt.link}>
-            <div style={{ width: crtW, height: crtSize }}>
-              {crt.scene}
-            </div>
-          </CRTMonitor>
-        ))}
+        <div style={{
+          position: "absolute", left: 0, top: 0,
+          width: isMobile ? "100%" : DESIGN.w, height: isMobile ? "100%" : DESIGN.h,
+          transform: scale < 1 ? `scale(${scale})` : undefined, transformOrigin: "0 0",
+        }}>
+          {/* Desktop Icons */}
+          {!isMobile && (
+            <>
+              <DesktopIcon label="My Computer" icon="🖥" x={16} y={12} />
+              <DesktopIcon label="Network" icon="🌐" x={16} y={90} />
+              <DesktopIcon label="Recycle Bin" icon="🗑" x={16} y={168} />
+              <DesktopIcon label="Galaxy DB" icon="🌌" x={16} y={246} />
+              <DesktopIcon label="Comm Link" icon="📡" x={16} y={324} />
+            </>
+          )}
+
+          {windows.map((win, i) => (
+            <Win31Window
+              key={win.title}
+              title={win.title}
+              x={rects[i].x} y={rects[i].y}
+              width={rects[i].w} height={rects[i].h}
+              zIndex={i + 1}
+              href={win.href}
+              isMobile={isMobile}
+              bounds={bounds}
+              scale={scale}
+              {...(isMobile ? mobileTitle : {})}
+            >
+              {win.scene}
+            </Win31Window>
+          ))}
+        </div>
+
+        {/* CRT Monitors row at bottom */}
+        {showCrts && (
+          <div style={{
+            position: "absolute", bottom: 8 * scale, zIndex: 8,
+            display: "flex", gap: 20,
+            ...(isMobile
+              ? { left: "50%", transform: "translateX(-50%)" }
+              : { left: 100 * scale, transform: scale < 1 ? `scale(${scale})` : undefined, transformOrigin: "0 100%" }),
+          }}>
+            {crtList.map((crt, i) => (
+              <CRTMonitor key={i} scale={isMobile ? 0.6 : 0.7} href={crt.link}>
+                <div style={{ width: crtW, height: crtSize }}>
+                  {crt.scene}
+                </div>
+              </CRTMonitor>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Taskbar */}
       <Taskbar
         isMobile={isMobile}
+        showTray={area.w >= 480}
         windows={[
           { label: "George D. Fekaris", href: "/about" },
           { label: "LinkedIn", href: "https://www.linkedin.com/in/george-dino-fekaris/" },
