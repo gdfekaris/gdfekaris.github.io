@@ -1,49 +1,5 @@
-import { useState, useEffect } from "react";
-
-function useIsMobile(breakpoint = 768) {
-  const [mobile, setMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
-  );
-  useEffect(() => {
-    const check = () => setMobile(window.innerWidth < breakpoint);
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, [breakpoint]);
-  return mobile;
-}
-
-const WIN_COLORS = {
-  titleBar: "#000080",
-  titleText: "#FFFFFF",
-  borderDark: "#808080",
-  borderLight: "#FFFFFF",
-  bg: "#C0C0C0",
-};
-
-// Navigate in-app unless a modifier key asks for a new tab or window
-function onInternalLinkClick(e) {
-  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-  e.preventDefault();
-  history.pushState({}, "", e.currentTarget.getAttribute("href"));
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
-/* ── Scanline overlay ── */
-function ScanlineOverlay() {
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        pointerEvents: "none",
-        zIndex: 99998,
-        background:
-          "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px)",
-        mixBlendMode: "multiply",
-      }}
-    />
-  );
-}
+import { useState } from "react";
+import { WIN_COLORS, LINKS, useViewport, linkProps, ScanlineOverlay, TitleBarButtons } from "./shared.jsx";
 
 /* ── Menu item with hover ── */
 function MenuItem({ label, href, bold }) {
@@ -51,7 +7,7 @@ function MenuItem({ label, href, bold }) {
   const Tag = href ? "a" : "div";
   return (
     <Tag
-      {...(href ? { href, onClick: onInternalLinkClick } : {})}
+      {...(href ? linkProps(href) : {})}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -174,7 +130,7 @@ function Ruler() {
 
 /* ── Main About Page ── */
 export default function AboutPage() {
-  const isMobile = useIsMobile();
+  const isMobile = useViewport().w < 768;
   const toolbarItems = [
     "New",
     "Open",
@@ -251,31 +207,7 @@ export default function AboutPage() {
             <span style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.4)" }}>
               About - George D. Fekaris
             </span>
-            {/* decorative — hidden from screen readers and the tab order */}
-            <div aria-hidden="true" style={{ display: "flex", gap: 2 }}>
-              {["_", "□", "×"].map((btn, i) => (
-                <button
-                  key={i}
-                  tabIndex={-1}
-                  style={{
-                    width: 16,
-                    height: 14,
-                    fontSize: 10,
-                    lineHeight: "10px",
-                    border: "1px outset #ddd",
-                    background: "#c0c0c0",
-                    cursor: "default",
-                    padding: 0,
-                    fontFamily: "inherit",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {btn}
-                </button>
-              ))}
-            </div>
+            <TitleBarButtons />
           </div>
 
           {/* Menu bar */}
@@ -394,7 +326,7 @@ export default function AboutPage() {
                 </a>{" "}
                 and on his own time. As a hobbyist, he writes poems and builds{" "}
                 <a
-                  href="https://github.com/gdfekaris"
+                  href={LINKS.github}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ color: "#000080" }}

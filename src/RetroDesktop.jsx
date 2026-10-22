@@ -1,15 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
-
-function useViewport() {
-  const read = () => ({ w: window.innerWidth, h: window.innerHeight });
-  const [vp, setVp] = useState(read);
-  useEffect(() => {
-    const onResize = () => setVp(read());
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return vp;
-}
+import { WIN_COLORS, LINKS, useViewport, linkProps, ScanlineOverlay, TitleBarButtons } from "./shared.jsx";
 
 // Size of an element, kept current with ResizeObserver
 function useElementSize(ref, fallback) {
@@ -28,15 +18,6 @@ function useElementSize(ref, fallback) {
 }
 
 const PIXEL_BORDER = "2px solid";
-const WIN_COLORS = {
-  titleBar: "#000080",
-  titleText: "#FFFFFF",
-  border: "#C0C0C0",
-  borderDark: "#808080",
-  borderLight: "#FFFFFF",
-  bg: "#C0C0C0",
-  desktop: "#008080",
-};
 
 /* ── tiny pixel-art generators (canvas based) ── */
 function usePixelCanvas(width, height, drawFn, deps = []) {
@@ -544,23 +525,6 @@ function AnimatedLandscapeScene({ width = 100, height = 70 }) {
   return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
-/* ── Links ── */
-// Real <a> elements, so links work with the keyboard, screen readers,
-// long-press and middle-click. Internal paths navigate in-app unless a
-// modifier key asks for a new tab or window.
-function linkProps(href) {
-  if (!href.startsWith('/')) return { href, target: "_blank", rel: "noopener noreferrer" };
-  return {
-    href,
-    onClick: (e) => {
-      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      e.preventDefault();
-      history.pushState({}, '', href);
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    },
-  };
-}
-
 /* ── CRT Monitor component ── */
 function CRTMonitor({ children, scale = 1, style = {}, href = null }) {
   const [hovered, setHovered] = useState(false);
@@ -720,19 +684,7 @@ function Win31Window({
             }}
           >
             <span style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.4)" }}>{title}</span>
-            {/* decorative — hidden from screen readers and the tab order */}
-            <div aria-hidden="true" style={{ display: "flex", gap: 2 }}>
-              {["_", "□", "×"].map((btn, i) => (
-                <button key={i} tabIndex={-1} style={{
-                  width: 16, height: 14, fontSize: 10, lineHeight: "10px",
-                  border: "1px outset #ddd", background: "#c0c0c0",
-                  cursor: "grab", padding: 0, fontFamily: "inherit",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {btn}
-                </button>
-              ))}
-            </div>
+            <TitleBarButtons />
           </div>
           {/* spacer bar */}
           <div style={{
@@ -825,6 +777,7 @@ function TaskbarButton({ label, href, isMobile }) {
 
 function Taskbar({ windows, isMobile, showTray = true }) {
   const items = isMobile ? windows.filter(w => w.href) : windows;
+  const time = useClock();
   return (
     <nav aria-label="Taskbar" style={{
       position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999,
@@ -864,39 +817,33 @@ function Taskbar({ windows, isMobile, showTray = true }) {
       {/* System tray */}
       {showTray && <div style={{
         border: "1px inset #888", padding: "2px 8px", fontSize: isMobile ? 13 : 11,
-        display: "flex", alignItems: "center", gap: 8,
+        display: "flex", alignItems: "center", gap: 8, flexShrink: 0, whiteSpace: "nowrap",
       }}>
         <span style={{ fontSize: isMobile ? 12 : 10 }}>🔊</span>
         <span style={{ fontSize: isMobile ? 18 : 16, lineHeight: isMobile ? "13px" : "11px" }}>∞</span>
+        <span>{time}</span>
       </div>}
     </nav>
   );
 }
 
 /* ── Clock Hook ── */
+// The visitor's local time, in their own locale's format (12- or 24-hour)
+const formatTime = () => new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
 function useClock() {
-  const [time, setTime] = useState("");
+  const [time, setTime] = useState(formatTime);
   useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      setTime(now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }));
+    // Tick on each minute boundary so the clock never lags the real time
+    let id;
+    const tick = () => {
+      setTime(formatTime());
+      id = setTimeout(tick, 60000 - (Date.now() % 60000));
     };
-    update();
-    const id = setInterval(update, 30000);
-    return () => clearInterval(id);
+    tick();
+    return () => clearTimeout(id);
   }, []);
   return time;
-}
-
-/* ── Scanline overlay ── */
-function ScanlineOverlay() {
-  return (
-    <div style={{
-      position: "fixed", inset: 0, pointerEvents: "none", zIndex: 99998,
-      background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px)",
-      mixBlendMode: "multiply",
-    }} />
-  );
 }
 
 /* ── Desktop Icons ── */
@@ -937,12 +884,12 @@ const DESIGN = { w: 940, h: 600 };
 const CRT_ROW_H = 114;
 
 const WINDOWS = [
-  { title: "George D. Fekaris - [cosmos.bmp]", href: "/about", label: "About George D. Fekaris",
+  { title: "George D. Fekaris - [cosmos.bmp]", href: LINKS.about, label: "About George D. Fekaris",
     rect: { x: 60, y: 10, w: 680, h: 420 }, scene: <SpaceScene width={680} height={370} /> },
-  { title: "LinkedIn - [planet_surface.dat]", href: "https://www.linkedin.com/in/george-dino-fekaris/",
+  { title: "LinkedIn - [planet_surface.dat]", href: LINKS.linkedin,
     label: "George D. Fekaris on LinkedIn (opens in a new tab)",
     rect: { x: 200, y: 100, w: 420, h: 320 }, scene: <LandscapeScene width={420} height={270} /> },
-  { title: "GitHub - [bio_dome.bmp]", href: "https://github.com/gdfekaris",
+  { title: "GitHub - [bio_dome.bmp]", href: LINKS.github,
     label: "George D. Fekaris on GitHub (opens in a new tab)",
     rect: { x: 20, y: 220, w: 220, h: 200 }, scene: <DomeScene width={220} height={150} /> },
   // Unlinked windows (desktop only) — add an href to link them later
@@ -984,7 +931,6 @@ const VISUALLY_HIDDEN = {
 
 /* ── Main App ── */
 export default function RetroDesktop() {
-  const time = useClock();
   const viewport = useViewport();
   const mode = getMode(viewport);
   const isMobile = mode !== "desktop";
@@ -1100,9 +1046,9 @@ export default function RetroDesktop() {
         isMobile={isMobile}
         showTray={area.w >= 480}
         windows={[
-          { label: "George D. Fekaris", href: "/about" },
-          { label: "LinkedIn", href: "https://www.linkedin.com/in/george-dino-fekaris/" },
-          { label: "GitHub", href: "https://github.com/gdfekaris" },
+          { label: "George D. Fekaris", href: LINKS.about },
+          { label: "LinkedIn", href: LINKS.linkedin },
+          { label: "GitHub", href: LINKS.github },
           { label: "Sensors" },
           { label: "Star Chart" },
         ]}
