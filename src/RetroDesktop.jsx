@@ -53,6 +53,24 @@ function usePixelCanvas(width, height, drawFn, deps = []) {
   return ref;
 }
 
+// Per-pixel drawing straight into an ImageData buffer — much faster than
+// thousands of 1×1 fillRects. set() blends like fillRect over opaque pixels.
+function pixelBuffer(ctx, w, h) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  return {
+    set(x, y, r, g, b, a = 1) {
+      if (x < 0 || y < 0 || x >= w || y >= h) return;
+      const i = (y * w + x) * 4;
+      d[i] = r * a + d[i] * (1 - a);
+      d[i + 1] = g * a + d[i + 1] * (1 - a);
+      d[i + 2] = b * a + d[i + 2] * (1 - a);
+      d[i + 3] = 255;
+    },
+    flush() { ctx.putImageData(img, 0, 0); },
+  };
+}
+
 function seededRandom(seed) {
   let s = seed;
   return () => {
@@ -108,6 +126,45 @@ function SpaceScene({ width = 320, height = 200 }) {
   return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
+// Moon, water and terrain shared by the static and animated landscapes
+function drawMoonWaterTerrain(ctx, w, h, rng) {
+  const px = pixelBuffer(ctx, w, h);
+  // moon
+  const mx = w * 0.5, my = h * 0.2, mr = 25;
+  for (let dy = -mr; dy <= mr; dy++) {
+    for (let dx = -mr; dx <= mr; dx++) {
+      if (dx * dx + dy * dy <= mr * mr) {
+        const shade = 200 + Math.floor(((dx + dy) / mr) * 25);
+        px.set(Math.floor(mx + dx), Math.floor(my + dy), shade, shade, shade + 10);
+      }
+    }
+  }
+  // water
+  for (let y = Math.floor(h * 0.45); y < Math.floor(h * 0.6); y++) {
+    for (let x = 0; x < w; x++) {
+      const wave = Math.sin(x / 8 + y / 3) * 10;
+      const g = 120 + Math.floor(wave) + Math.floor(rng() * 20);
+      const b = 160 + Math.floor(wave) + Math.floor(rng() * 20);
+      px.set(x, y, 40 + Math.floor(rng() * 20), g, b);
+    }
+  }
+  // terrain
+  for (let y = Math.floor(h * 0.55); y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const t = (y - h * 0.55) / (h * 0.45);
+      const noise = Math.sin(x / 12) * 10 + Math.cos(x / 7 + y / 5) * 8;
+      if (t < 0.3 + noise / 100) {
+        const g = 80 + Math.floor(rng() * 40) + Math.floor(noise);
+        px.set(x, y, 40 + Math.floor(rng() * 20), Math.min(160, g), 30 + Math.floor(rng() * 20));
+      } else {
+        const r = 140 + Math.floor(rng() * 40) + Math.floor(noise / 2);
+        px.set(x, y, Math.min(200, r), 80 + Math.floor(rng() * 30), 40 + Math.floor(rng() * 20));
+      }
+    }
+  }
+  px.flush();
+}
+
 function LandscapeScene({ width = 280, height = 180 }) {
   const ref = usePixelCanvas(width, height, (ctx, w, h) => {
     const rng = seededRandom(101);
@@ -117,42 +174,7 @@ function LandscapeScene({ width = 280, height = 180 }) {
       ctx.fillStyle = `rgb(${100 + Math.floor(t * 80)},${140 + Math.floor(t * 60)},${200 + Math.floor(t * 40)})`;
       ctx.fillRect(0, y, w, 1);
     }
-    // moon
-    const mx = w * 0.5, my = h * 0.2, mr = 25;
-    for (let dy = -mr; dy <= mr; dy++) {
-      for (let dx = -mr; dx <= mr; dx++) {
-        if (dx * dx + dy * dy <= mr * mr) {
-          const shade = 200 + Math.floor(((dx + dy) / mr) * 25);
-          ctx.fillStyle = `rgb(${shade},${shade},${shade + 10})`;
-          ctx.fillRect(Math.floor(mx + dx), Math.floor(my + dy), 1, 1);
-        }
-      }
-    }
-    // water
-    for (let y = Math.floor(h * 0.45); y < Math.floor(h * 0.6); y++) {
-      for (let x = 0; x < w; x++) {
-        const wave = Math.sin(x / 8 + y / 3) * 10;
-        const g = 120 + Math.floor(wave) + Math.floor(rng() * 20);
-        const b = 160 + Math.floor(wave) + Math.floor(rng() * 20);
-        ctx.fillStyle = `rgb(${40 + Math.floor(rng() * 20)},${g},${b})`;
-        ctx.fillRect(x, y, 1, 1);
-      }
-    }
-    // terrain
-    for (let y = Math.floor(h * 0.55); y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const t = (y - h * 0.55) / (h * 0.45);
-        const noise = Math.sin(x / 12) * 10 + Math.cos(x / 7 + y / 5) * 8;
-        if (t < 0.3 + noise / 100) {
-          const g = 80 + Math.floor(rng() * 40) + Math.floor(noise);
-          ctx.fillStyle = `rgb(${40 + Math.floor(rng() * 20)},${Math.min(160, g)},${30 + Math.floor(rng() * 20)})`;
-        } else {
-          const r = 140 + Math.floor(rng() * 40) + Math.floor(noise / 2);
-          ctx.fillStyle = `rgb(${Math.min(200, r)},${80 + Math.floor(rng() * 30)},${40 + Math.floor(rng() * 20)})`;
-        }
-        ctx.fillRect(x, y, 1, 1);
-      }
-    }
+    drawMoonWaterTerrain(ctx, w, h, rng);
   });
   return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
@@ -166,6 +188,7 @@ function DomeScene({ width = 200, height = 160 }) {
       ctx.fillStyle = `rgb(${80 + Math.floor(t * 100)},${100 + Math.floor(t * 80)},${180 + Math.floor(t * 50)})`;
       ctx.fillRect(0, y, w, 1);
     }
+    const px = pixelBuffer(ctx, w, h);
     // dome
     const cx = w * 0.5, cy = h * 0.75, rx = 50, ry = 45;
     for (let dy = -ry; dy <= 0; dy++) {
@@ -173,8 +196,8 @@ function DomeScene({ width = 200, height = 160 }) {
         if ((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1) {
           const shine = Math.max(0, 1 - ((dx + 10) * (dx + 10) + (dy + 10) * (dy + 10)) / (rx * rx));
           const b = 160 + Math.floor(shine * 80) + Math.floor(rng() * 10);
-          ctx.fillStyle = `rgba(${140 + Math.floor(shine * 60)},${150 + Math.floor(shine * 60)},${Math.min(255, b)},0.85)`;
-          ctx.fillRect(Math.floor(cx + dx), Math.floor(cy + dy), 1, 1);
+          px.set(Math.floor(cx + dx), Math.floor(cy + dy),
+            140 + Math.floor(shine * 60), 150 + Math.floor(shine * 60), Math.min(255, b), 0.85);
         }
       }
     }
@@ -182,10 +205,10 @@ function DomeScene({ width = 200, height = 160 }) {
     for (let y = Math.floor(h * 0.75); y < h; y++) {
       for (let x = 0; x < w; x++) {
         const g = 100 + Math.floor(rng() * 40);
-        ctx.fillStyle = `rgb(${60 + Math.floor(rng() * 30)},${g},${60 + Math.floor(rng() * 30)})`;
-        ctx.fillRect(x, y, 1, 1);
+        px.set(x, y, 60 + Math.floor(rng() * 30), g, 60 + Math.floor(rng() * 30));
       }
     }
+    px.flush();
     // clouds
     for (let i = 0; i < 400; i++) {
       const x = Math.floor(rng() * w);
@@ -277,16 +300,17 @@ function DesertScene({ width = 200, height = 130 }) {
       ctx.fillStyle = `rgb(${180 + Math.floor(t * 40)},${160 + Math.floor(t * 50)},${120 + Math.floor(t * 60)})`;
       ctx.fillRect(0, y, w, 1);
     }
+    const px = pixelBuffer(ctx, w, h);
     for (let y = Math.floor(h * 0.4); y < h; y++) {
       for (let x = 0; x < w; x++) {
         const dune = Math.sin(x / 25 + y / 20) * 15;
         const r = 190 + Math.floor(dune) + Math.floor(rng() * 20);
         const g = 160 + Math.floor(dune * 0.8) + Math.floor(rng() * 15);
         const b = 100 + Math.floor(rng() * 20);
-        ctx.fillStyle = `rgb(${Math.min(240, r)},${Math.min(210, g)},${b})`;
-        ctx.fillRect(x, y, 1, 1);
+        px.set(x, y, Math.min(240, r), Math.min(210, g), b);
       }
     }
+    px.flush();
   });
   return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
@@ -322,6 +346,8 @@ function PieChart({ width = 180, height = 140 }) {
 }
 
 /* ── Animated canvas hook (for CRT monitors) ── */
+const CRT_FRAME_MS = 1000 / 15;
+
 function useAnimatedCanvas(width, height, setupFn) {
   const ref = useRef(null);
   useEffect(() => {
@@ -332,9 +358,18 @@ function useAnimatedCanvas(width, height, setupFn) {
     const ctx = c.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     const drawFrame = setupFn(ctx, width, height);
-    let animId;
+    // Honor the OS "reduce motion" setting with a single still frame
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      drawFrame(0);
+      return;
+    }
+    // ~15 fps suits the CRT look and spares phone batteries
+    let animId, last = -Infinity;
     const loop = (time) => {
-      drawFrame(time);
+      if (time - last >= CRT_FRAME_MS - 2) { // slack for frame-time jitter
+        last = time;
+        drawFrame(time);
+      }
       animId = requestAnimationFrame(loop);
     };
     animId = requestAnimationFrame(loop);
@@ -480,58 +515,30 @@ function AnimatedLandscapeScene({ width = 100, height = 70 }) {
       bgCtx.fillStyle = `rgb(${100 + Math.floor(t * 80)},${140 + Math.floor(t * 60)},${200 + Math.floor(t * 40)})`;
       bgCtx.fillRect(0, y, w, 1);
     }
-    // moon
-    const mx = w * 0.5, my = h * 0.2, mr = 25;
-    for (let dy = -mr; dy <= mr; dy++) {
-      for (let dx = -mr; dx <= mr; dx++) {
-        if (dx * dx + dy * dy <= mr * mr) {
-          const shade = 200 + Math.floor(((dx + dy) / mr) * 25);
-          bgCtx.fillStyle = `rgb(${shade},${shade},${shade + 10})`;
-          bgCtx.fillRect(Math.floor(mx + dx), Math.floor(my + dy), 1, 1);
-        }
-      }
-    }
-    // water (drawn to bg to keep rng sequence; overdrawn per frame)
+    // water is drawn to bg to keep the rng sequence, then overdrawn per frame
+    drawMoonWaterTerrain(bgCtx, w, h, rng);
     const waterTop = Math.floor(h * 0.45);
     const waterBottom = Math.floor(h * 0.6);
-    for (let y = waterTop; y < waterBottom; y++) {
-      for (let x = 0; x < w; x++) {
-        const wave = Math.sin(x / 8 + y / 3) * 10;
-        const g = 120 + Math.floor(wave) + Math.floor(rng() * 20);
-        const b = 160 + Math.floor(wave) + Math.floor(rng() * 20);
-        bgCtx.fillStyle = `rgb(${40 + Math.floor(rng() * 20)},${g},${b})`;
-        bgCtx.fillRect(x, y, 1, 1);
-      }
-    }
-    // terrain
-    for (let y = Math.floor(h * 0.55); y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const t = (y - h * 0.55) / (h * 0.45);
-        const noise = Math.sin(x / 12) * 10 + Math.cos(x / 7 + y / 5) * 8;
-        if (t < 0.3 + noise / 100) {
-          const g = 80 + Math.floor(rng() * 40) + Math.floor(noise);
-          bgCtx.fillStyle = `rgb(${40 + Math.floor(rng() * 20)},${Math.min(160, g)},${30 + Math.floor(rng() * 20)})`;
-        } else {
-          const r = 140 + Math.floor(rng() * 40) + Math.floor(noise / 2);
-          bgCtx.fillStyle = `rgb(${Math.min(200, r)},${80 + Math.floor(rng() * 30)},${40 + Math.floor(rng() * 20)})`;
-        }
-        bgCtx.fillRect(x, y, 1, 1);
-      }
-    }
+    const water = ctx.createImageData(w, waterBottom - waterTop);
     return (time) => {
       const t = time / 1000;
       ctx.drawImage(bg, 0, 0);
       // animated water shimmer
+      const d = water.data;
       for (let y = waterTop; y < waterBottom; y++) {
         for (let x = 0; x < w; x++) {
           const wave = Math.sin(x / 6 + y / 3 + t * 3) * 15;
           const shimmer = Math.sin(x / 4 + t * 4) * 12 + Math.cos(y / 3 + t * 2.5) * 10;
           const g = 120 + Math.floor(wave + shimmer);
           const b = 160 + Math.floor(wave + shimmer);
-          ctx.fillStyle = `rgb(40,${Math.max(80, Math.min(200, g))},${Math.max(120, Math.min(220, b))})`;
-          ctx.fillRect(x, y, 1, 1);
+          const i = ((y - waterTop) * w + x) * 4;
+          d[i] = 40;
+          d[i + 1] = Math.max(80, Math.min(200, g));
+          d[i + 2] = Math.max(120, Math.min(220, b));
+          d[i + 3] = 255;
         }
       }
+      ctx.putImageData(water, 0, waterTop);
     };
   });
   return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
