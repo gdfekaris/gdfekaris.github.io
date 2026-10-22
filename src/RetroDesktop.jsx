@@ -601,14 +601,16 @@ function Win31Window({
   isMobile = false,
   bounds = null, // { w, h } of the area the window may be dragged within
   scale = 1,     // CSS scale applied by the parent, to convert pointer deltas
+  arrangeKey = 0, // changes when the user picks Arrange Windows
 }) {
   const [hovered, setHovered] = useState(false);
   const [pos, setPos] = useState({ x: initialX, y: initialY });
 
   // Snap back to the layout position whenever the layout changes (resize/rotate)
+  // or the user asks to arrange the windows
   useEffect(() => {
     setPos({ x: initialX, y: initialY });
-  }, [initialX, initialY]);
+  }, [initialX, initialY, arrangeKey]);
 
   // Pointer events cover mouse, touch and pen in one path; capture keeps the
   // drag alive outside the title bar, and pointercancel ends interrupted drags.
@@ -775,7 +777,120 @@ function TaskbarButton({ label, href, isMobile }) {
   );
 }
 
-function Taskbar({ windows, isMobile, showTray = true }) {
+/* ── Start menu ── */
+const START_ITEMS = [
+  { icon: "👤", label: "About Me", href: LINKS.about },
+  { icon: "💼", label: "LinkedIn", href: LINKS.linkedin },
+  { icon: "🐙", label: "GitHub", href: LINKS.github },
+];
+
+function StartMenuItem({ icon, label, href, onClick, isMobile }) {
+  const [active, setActive] = useState(false);
+  const Tag = href ? "a" : "button";
+  const props = href ? linkProps(href) : { type: "button" };
+  return (
+    <Tag
+      {...props}
+      onClick={(e) => { props.onClick?.(e); onClick(); }}
+      onMouseEnter={() => setActive(true)}
+      onMouseLeave={() => setActive(false)}
+      onFocus={() => setActive(true)}
+      onBlur={() => setActive(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: 8, width: "100%",
+        padding: isMobile ? "10px 14px" : "5px 12px",
+        background: active ? WIN_COLORS.titleBar : "transparent",
+        color: active ? WIN_COLORS.titleText : "#000",
+        border: "none", outline: "none", textDecoration: "none", textAlign: "left",
+        fontFamily: "inherit", fontSize: isMobile ? 14 : 11, cursor: "pointer", whiteSpace: "nowrap",
+      }}
+    >
+      <span aria-hidden="true" style={{ width: 18, textAlign: "center" }}>{icon}</span>
+      {label}
+    </Tag>
+  );
+}
+
+// Home button that opens a Win95-style menu: the site's links plus Arrange
+// Windows. Closes on a pick, Escape, or a click/tap or focus anywhere else.
+function StartMenu({ isMobile, onArrange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+  const openedByKeyboard = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (openedByKeyboard.current) menuRef.current.querySelector("a, button").focus();
+    const onPointerDown = (e) => { if (!wrapRef.current.contains(e.target)) setOpen(false); };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") { setOpen(false); buttonRef.current.focus(); }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const close = () => setOpen(false);
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{ position: "relative", flexShrink: 0 }}
+      // Focus moving elsewhere (e.g. Tab past the last item) closes the menu.
+      // Clicks are left to onPointerDown: Safari doesn't focus clicked buttons.
+      onBlur={(e) => { if (e.relatedTarget && !wrapRef.current.contains(e.relatedTarget)) close(); }}
+    >
+      <button
+        ref={buttonRef}
+        onClick={(e) => {
+          openedByKeyboard.current = e.detail === 0; // Enter/Space report no clicks
+          setOpen((o) => !o);
+        }}
+        aria-expanded={open}
+        aria-controls="start-menu"
+        style={{
+        height: isMobile ? 30 : 24, padding: "0 8px", fontWeight: "bold", fontSize: isMobile ? 13 : 11,
+        border: open ? "2px inset #ddd" : "2px outset #ddd", background: "#c0c0c0", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit", color: "#000",
+      }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" style={{ display: "block" }} aria-hidden="true">
+          <polygon points="8,1 15,8 8,15 1,8" fill="#000080" />
+          <polygon points="8,3 13,8 8,13 3,8" fill="#4040C0" />
+          <polygon points="8,5 11,8 8,11 5,8" fill="#8080E0" />
+          <polygon points="8,6.5 9.5,8 8,9.5 6.5,8" fill="#C0C0FF" />
+        </svg>
+        Home
+      </button>
+      {open && (
+        <div
+          id="start-menu"
+          ref={menuRef}
+          style={{
+            position: "absolute", left: 0, bottom: "calc(100% + 4px)", minWidth: isMobile ? 210 : 170,
+            background: WIN_COLORS.bg, padding: 2,
+            border: `2px solid ${WIN_COLORS.borderDark}`,
+            borderTopColor: WIN_COLORS.borderLight, borderLeftColor: WIN_COLORS.borderLight,
+            boxShadow: "2px 2px 0 #000",
+          }}
+        >
+          {START_ITEMS.map((item) => (
+            <StartMenuItem key={item.label} {...item} onClick={close} isMobile={isMobile} />
+          ))}
+          <div style={{ margin: "3px 2px", borderTop: "1px solid #808080", borderBottom: "1px solid #fff" }} />
+          <StartMenuItem icon="🗂" label="Arrange Windows" isMobile={isMobile}
+            onClick={() => { onArrange(); close(); }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Taskbar({ windows, isMobile, showTray = true, onArrange }) {
   const items = isMobile ? windows.filter(w => w.href) : windows;
   const time = useClock();
   return (
@@ -792,22 +907,7 @@ function Taskbar({ windows, isMobile, showTray = true }) {
       fontFamily: '"MS Sans Serif", Arial, sans-serif', fontSize: isMobile ? 13 : 11,
       boxShadow: "0 -1px 0 #808080",
     }}>
-      {/* Start button */}
-      <button
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        style={{
-        height: isMobile ? 30 : 24, padding: "0 8px", fontWeight: "bold", fontSize: isMobile ? 13 : 11,
-        border: "2px outset #ddd", background: "#c0c0c0", cursor: "pointer",
-        display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit", flexShrink: 0,
-      }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" style={{ display: "block" }}>
-          <polygon points="8,1 15,8 8,15 1,8" fill="#000080" />
-          <polygon points="8,3 13,8 8,13 3,8" fill="#4040C0" />
-          <polygon points="8,5 11,8 8,11 5,8" fill="#8080E0" />
-          <polygon points="8,6.5 9.5,8 8,9.5 6.5,8" fill="#C0C0FF" />
-        </svg>
-        Home
-      </button>
+      <StartMenu isMobile={isMobile} onArrange={onArrange} />
       <div style={{ flexShrink: 0, width: 1, height: isMobile ? 28 : 20, borderLeft: "1px solid #808080", borderRight: "1px solid #fff", margin: "0 2px" }} />
       {/* Window buttons */}
       {items.map((w) => (
@@ -931,6 +1031,7 @@ const VISUALLY_HIDDEN = {
 
 /* ── Main App ── */
 export default function RetroDesktop() {
+  const [arrangeKey, setArrangeKey] = useState(0);
   const viewport = useViewport();
   const mode = getMode(viewport);
   const isMobile = mode !== "desktop";
@@ -1014,6 +1115,7 @@ export default function RetroDesktop() {
               isMobile={isMobile}
               bounds={bounds}
               scale={scale}
+              arrangeKey={arrangeKey}
               {...(isMobile ? mobileTitle : {})}
             >
               {win.scene}
@@ -1045,6 +1147,7 @@ export default function RetroDesktop() {
       <Taskbar
         isMobile={isMobile}
         showTray={area.w >= 480}
+        onArrange={() => setArrangeKey((k) => k + 1)}
         windows={[
           { label: "George D. Fekaris", href: LINKS.about },
           { label: "LinkedIn", href: LINKS.linkedin },
