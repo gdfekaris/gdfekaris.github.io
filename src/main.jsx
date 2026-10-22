@@ -25,6 +25,11 @@ function App() {
 
   // Ignore trailing slashes so /about/ matches /about
   const route = path.replace(/\/+$/, '') || '/';
+
+  useEffect(() => {
+    document.title = route === '/about' ? 'About - George D. Fekaris' : 'George D. Fekaris';
+  }, [route]);
+
   if (route === '/about') return <AboutPage />;
   return <RetroDesktop />;
 }

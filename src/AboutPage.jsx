@@ -20,8 +20,11 @@ const WIN_COLORS = {
   bg: "#C0C0C0",
 };
 
-function navigate(path) {
-  history.pushState({}, "", path);
+// Navigate in-app unless a modifier key asks for a new tab or window
+function onInternalLinkClick(e) {
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  history.pushState({}, "", e.currentTarget.getAttribute("href"));
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
@@ -43,23 +46,26 @@ function ScanlineOverlay() {
 }
 
 /* ── Menu item with hover ── */
-function MenuItem({ label, onClick, bold }) {
+function MenuItem({ label, href, bold }) {
   const [hovered, setHovered] = useState(false);
+  const Tag = href ? "a" : "div";
   return (
-    <div
-      onClick={onClick}
+    <Tag
+      {...(href ? { href, onClick: onInternalLinkClick } : {})}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
+        display: "block",
         padding: "2px 8px",
-        cursor: onClick ? "pointer" : "default",
+        textDecoration: "none",
+        cursor: href ? "pointer" : "default",
         background: hovered ? WIN_COLORS.titleBar : "transparent",
         color: hovered ? "#fff" : "#000",
         fontWeight: bold ? "bold" : "normal",
       }}
     >
       {label}
-    </div>
+    </Tag>
   );
 }
 
@@ -67,6 +73,7 @@ function MenuItem({ label, onClick, bold }) {
 function ToolButton({ label }) {
   return (
     <button
+      tabIndex={-1}
       style={{
         height: 22,
         padding: "2px 6px",
@@ -244,10 +251,12 @@ export default function AboutPage() {
             <span style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.4)" }}>
               About - George D. Fekaris
             </span>
-            <div style={{ display: "flex", gap: 2 }}>
+            {/* decorative — hidden from screen readers and the tab order */}
+            <div aria-hidden="true" style={{ display: "flex", gap: 2 }}>
               {["_", "□", "×"].map((btn, i) => (
                 <button
                   key={i}
+                  tabIndex={-1}
                   style={{
                     width: 16,
                     height: 14,
@@ -282,7 +291,7 @@ export default function AboutPage() {
           >
             <MenuItem
               label="← Home"
-              onClick={() => navigate("/")}
+              href="/"
               bold
             />
             {["File", "Edit", "View", "Insert", "Format", "Help"].map(
@@ -292,8 +301,9 @@ export default function AboutPage() {
             )}
           </div>
 
-          {/* Toolbar */}
+          {/* Toolbar (decorative) */}
           <div
+            aria-hidden="true"
             style={{
               background: WIN_COLORS.bg,
               borderBottom: "1px solid #808080",

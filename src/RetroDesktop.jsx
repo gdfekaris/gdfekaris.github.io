@@ -544,12 +544,30 @@ function AnimatedLandscapeScene({ width = 100, height = 70 }) {
   return <canvas ref={ref} style={{ width: "100%", height: "100%", objectFit: "cover", imageRendering: "pixelated", display: "block" }} />;
 }
 
+/* ── Links ── */
+// Real <a> elements, so links work with the keyboard, screen readers,
+// long-press and middle-click. Internal paths navigate in-app unless a
+// modifier key asks for a new tab or window.
+function linkProps(href) {
+  if (!href.startsWith('/')) return { href, target: "_blank", rel: "noopener noreferrer" };
+  return {
+    href,
+    onClick: (e) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      history.pushState({}, '', href);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    },
+  };
+}
+
 /* ── CRT Monitor component ── */
 function CRTMonitor({ children, scale = 1, style = {}, href = null }) {
   const [hovered, setHovered] = useState(false);
+  const Tag = href ? "a" : "div";
   return (
-    <div
-      onClick={href ? () => window.open(href, "_blank", "noopener") : undefined}
+    <Tag
+      {...(href ? linkProps(href) : {})}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -598,7 +616,7 @@ function CRTMonitor({ children, scale = 1, style = {}, href = null }) {
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#4a4", boxShadow: "0 0 4px #0f0" }} />
         <div style={{ width: 30, height: 3, background: "#706c60", borderRadius: 2 }} />
       </div>
-    </div>
+    </Tag>
   );
 }
 
@@ -613,6 +631,7 @@ function Win31Window({
   zIndex = 1,
   minimized = false,
   href = null,
+  label = null,  // accessible name for the link (the art itself has no text)
   titleFontSize = 11,
   titlePadding = "2px 4px",
   isMobile = false,
@@ -653,6 +672,8 @@ function Win31Window({
   }, [pos, bounds, scale, width]);
 
   if (minimized) return null;
+
+  const Content = href ? "a" : "div";
 
   return (
     <div
@@ -699,9 +720,10 @@ function Win31Window({
             }}
           >
             <span style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.4)" }}>{title}</span>
-            <div style={{ display: "flex", gap: 2 }}>
+            {/* decorative — hidden from screen readers and the tab order */}
+            <div aria-hidden="true" style={{ display: "flex", gap: 2 }}>
               {["_", "□", "×"].map((btn, i) => (
-                <button key={i} style={{
+                <button key={i} tabIndex={-1} style={{
                   width: 16, height: 14, fontSize: 10, lineHeight: "10px",
                   border: "1px outset #ddd", background: "#c0c0c0",
                   cursor: "grab", padding: 0, fontFamily: "inherit",
@@ -718,18 +740,12 @@ function Win31Window({
             height: 4,
           }} />
           {/* content */}
-          <div
-            onClick={href ? () => {
-              if (href.startsWith('/')) {
-                history.pushState({}, '', href);
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              } else {
-                window.open(href, "_blank", "noopener");
-              }
-            } : undefined}
+          <Content
+            {...(href ? { ...linkProps(href), "aria-label": label, draggable: false } : {})}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
+              display: "block",
               height: height - 50,
               overflow: "hidden",
               background: "#fff",
@@ -770,7 +786,7 @@ function Win31Window({
                 ↖ TAP
               </div>
             )}
-          </div>
+          </Content>
         </div>
       </div>
     </div>
@@ -783,22 +799,19 @@ const taskbarHeight = (isMobile) => (isMobile ? 44 : 32);
 function TaskbarButton({ label, href, isMobile }) {
   const [hovered, setHovered] = useState(false);
   const hasLink = !!href;
+  const Tag = hasLink ? "a" : "span";
+  const h = isMobile ? 28 : 22;
   return (
-    <button
-      onClick={hasLink ? () => {
-        if (href.startsWith('/')) {
-          history.pushState({}, '', href);
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        } else {
-          window.open(href, "_blank", "noopener");
-        }
-      } : undefined}
+    <Tag
+      {...(hasLink ? linkProps(href) : {})}
       onMouseEnter={hasLink ? () => setHovered(true) : undefined}
       onMouseLeave={hasLink ? () => setHovered(false) : undefined}
       style={{
-        height: isMobile ? 28 : 22, padding: isMobile ? "0 10px" : "0 8px", fontSize: isMobile ? 13 : 10,
+        display: "inline-block", height: h, lineHeight: `${h - 2}px`, textAlign: "center",
+        padding: isMobile ? "0 10px" : "0 8px", fontSize: isMobile ? 13 : 10,
         border: "1px inset #888",
         background: hovered ? "#c8c8c8" : "#b8b8b8",
+        color: "#000", textDecoration: "none",
         cursor: hasLink ? "pointer" : "default",
         // Long labels give up space first so short ones stay readable
         maxWidth: isMobile ? 180 : 120, minWidth: 0, flexShrink: label.length > 12 ? 1 : 0, overflow: "hidden",
@@ -806,14 +819,14 @@ function TaskbarButton({ label, href, isMobile }) {
       }}
     >
       {label}
-    </button>
+    </Tag>
   );
 }
 
 function Taskbar({ windows, isMobile, showTray = true }) {
   const items = isMobile ? windows.filter(w => w.href) : windows;
   return (
-    <div style={{
+    <nav aria-label="Taskbar" style={{
       position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999,
       // Extend under the iPhone home indicator, keeping buttons above it
       height: `calc(${taskbarHeight(isMobile)}px + env(safe-area-inset-bottom, 0px))`,
@@ -856,7 +869,7 @@ function Taskbar({ windows, isMobile, showTray = true }) {
         <span style={{ fontSize: isMobile ? 12 : 10 }}>🔊</span>
         <span style={{ fontSize: isMobile ? 18 : 16, lineHeight: isMobile ? "13px" : "11px" }}>∞</span>
       </div>}
-    </div>
+    </nav>
   );
 }
 
@@ -924,11 +937,13 @@ const DESIGN = { w: 940, h: 600 };
 const CRT_ROW_H = 114;
 
 const WINDOWS = [
-  { title: "George D. Fekaris - [cosmos.bmp]", href: "/about",
+  { title: "George D. Fekaris - [cosmos.bmp]", href: "/about", label: "About George D. Fekaris",
     rect: { x: 60, y: 10, w: 680, h: 420 }, scene: <SpaceScene width={680} height={370} /> },
   { title: "LinkedIn - [planet_surface.dat]", href: "https://www.linkedin.com/in/george-dino-fekaris/",
+    label: "George D. Fekaris on LinkedIn (opens in a new tab)",
     rect: { x: 200, y: 100, w: 420, h: 320 }, scene: <LandscapeScene width={420} height={270} /> },
   { title: "GitHub - [bio_dome.bmp]", href: "https://github.com/gdfekaris",
+    label: "George D. Fekaris on GitHub (opens in a new tab)",
     rect: { x: 20, y: 220, w: 220, h: 200 }, scene: <DomeScene width={220} height={150} /> },
   // Unlinked windows (desktop only) — add an href to link them later
   { title: "Sensor Array Data",
@@ -960,6 +975,12 @@ function compactRects(mode, W, H) {
     { x: 10, y: r(H * 0.61), w: r(W * 0.59), h: r(H * 0.39) - 8 },
   ];
 }
+
+// Read by screen readers and search engines, not shown
+const VISUALLY_HIDDEN = {
+  position: "absolute", width: 1, height: 1, overflow: "hidden",
+  clip: "rect(0 0 0 0)", clipPath: "inset(50%)", whiteSpace: "nowrap",
+};
 
 /* ── Main App ── */
 export default function RetroDesktop() {
@@ -1010,6 +1031,7 @@ export default function RetroDesktop() {
       `,
     }}>
       <ScanlineOverlay />
+      <h1 style={VISUALLY_HIDDEN}>George D. Fekaris</h1>
 
       <div ref={areaRef} style={{
         position: "absolute", overflow: "hidden",
@@ -1042,6 +1064,7 @@ export default function RetroDesktop() {
               width={rects[i].w} height={rects[i].h}
               zIndex={i + 1}
               href={win.href}
+              label={win.label}
               isMobile={isMobile}
               bounds={bounds}
               scale={scale}
